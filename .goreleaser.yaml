@@ -29,6 +29,22 @@ archives:
       - goos: windows
         formats: [zip]
 
+# Debian/Ubuntu installation package (.deb) for the final Debian-based
+# install target. GoReleaser builds one .deb per linux build and attaches
+# them to the same GitHub Release as the archives.
+nfpms:
+  - id: packages
+    package_name: snipsnap
+    vendor: dchittibala
+    homepage: https://github.com/dchittibala/snipsnap
+    maintainer: dchittibala <dchittibala@users.noreply.github.com>
+    description: A safe file-manipulation CLI (create, copy, combine, delete).
+    license: MIT
+    formats:
+      - deb
+    bindir: /usr/bin
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
 # release-please already created the GitHub Release (with its own
 # Conventional-Commits changelog) before this runs; keep-existing means
 # GoReleaser only uploads the built archives to it instead of overwriting

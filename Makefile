@@ -1,4 +1,4 @@
-MODULE      := github.com/yourusername/snipsnap
+MODULE      := github.com/dchittibala/snipsnap
 BINARY_NAME := snipsnap
 CMD_DIR     := ./cmd/snipsnap
 

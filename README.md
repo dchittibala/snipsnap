@@ -31,7 +31,9 @@ A Go CLI utility for safe file operations. `snipsnap` provides atomic file creat
 ├── pkg/
 │   └── fileops/
 │       ├── ops.go               # Core file operation logic
-│       └── ops_test.go          # Unit tests & race condition safeguards
+│       ├── ops_test.go          # Unit tests & race condition safeguards
+│       ├── version.go           # Version/Commit/BuildDate vars (injected at release time)
+│       └── version_test.go      # Version defaults test
 ├── .goreleaser.yaml             # Cross-compilation matrix configuration
 ├── .pre-commit-config.yaml      # Pre-commit hook configuration for conventional commits
 ├── Makefile                     # Build, test, lint, and hook installation targets
@@ -56,11 +58,11 @@ Versioning is driven by two vendor-neutral standards, enforced by tooling rather
 
 ### Option 1: Build from Source
 
-**Prerequisites**: Go 1.24+ installed.
+**Prerequisites**: Go 1.25+ installed.
 
 ```bash
 # Clone repository
-git clone [https://github.com/dchittibala/snipsnap.git](https://github.com/dchittibala/snipsnap.git)
+git clone https://github.com/dchittibala/snipsnap.git
 cd snipsnap
 
 # Initialize git pre-commit hooks for conventional commit checks
@@ -73,9 +75,21 @@ make build
 ./bin/snipsnap version
 ```
 
-### Option 2: Download Compiled Binaries
+### Option 2: Install on Debian / Ubuntu (.deb)
 
-Download pre-compiled static binaries for your OS and architecture directly from the [GitHub Releases](https://github.com/dchittibala/snipsnap/releases) page.
+Download the `.deb` for your architecture from the [Releases](https://github.com/dchittibala/snipsnap/releases) page and install it with `dpkg`:
+
+```bash
+# Set the version to install (see the Releases page for the latest)
+VERSION=1.1.0
+
+curl -LO https://github.com/dchittibala/snipsnap/releases/download/v${VERSION}/snipsnap_${VERSION}_linux_amd64.deb
+sudo dpkg -i snipsnap_${VERSION}_linux_amd64.deb
+
+# Verify (installs to /usr/bin/snipsnap)
+snipsnap version
+# -> snipsnap v1.2.3 (commit: abc1234, built at: 2026-09-01T12:00:00Z)
+```
 
 ---
 
