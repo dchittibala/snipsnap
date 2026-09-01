@@ -1,4 +1,4 @@
-name: Auto-Bump & Release Pipeline
+name: Release
 
 # Version bumps follow the Conventional Commits spec documented in the
 # README: a "!" on the type/scope (e.g. "feat!:") or a "BREAKING CHANGE:"
