@@ -18,20 +18,24 @@ builds:
     main: ./cmd/snipsnap
     ldflags:
       - -s -w
-      - -X github.com/yourusername/snipsnap/pkg/fileops.Version={{.Version}}
-      - -X github.com/yourusername/snipsnap/pkg/fileops.Commit={{.ShortCommit}}
-      - -X github.com/yourusername/snipsnap/pkg/fileops.BuildDate={{.Date}}
+      - -X github.com/dchittibala/snipsnap/pkg/fileops.Version={{.Version}}
+      - -X github.com/dchittibala/snipsnap/pkg/fileops.Commit={{.ShortCommit}}
+      - -X github.com/dchittibala/snipsnap/pkg/fileops.BuildDate={{.Date}}
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 
+# release-please already created the GitHub Release (with its own
+# Conventional-Commits changelog) before this runs; keep-existing means
+# GoReleaser only uploads the built archives to it instead of overwriting
+# the release body or creating a duplicate release.
+release:
+  mode: keep-existing
+
+# The changelog is owned by release-please; skip generating one here.
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
+  disable: true

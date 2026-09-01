@@ -12,7 +12,9 @@ repos:
     rev: v0.5.1
     hooks:
       - id: go-fmt
+        stages: [pre-commit]
       - id: go-imports
+        stages: [pre-commit]
 
   - repo: local
     hooks:
@@ -22,3 +24,4 @@ repos:
         language: system
         pass_filenames: false
         types: [go]
+        stages: [pre-commit]
