@@ -1,0 +1,45 @@
+name: Auto-Bump & Release Pipeline
+
+on:
+  push:
+    branches:
+      - main
+ 
+permissions:
+  contents: write # Required to push tags and create GitHub Releases
+
+jobs:
+  release:
+    name: Auto Bump & Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to calculate git history and existing tags
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run Unit Tests
+        run: go test -v -race -cover ./...
+
+      - name: Auto-Bump Version Tag
+        id: tagger
+        uses: anothrNick/github-tag-action@1.71.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: patch
+          RELEASE_BRANCHES: main,master
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: ~> v2
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
