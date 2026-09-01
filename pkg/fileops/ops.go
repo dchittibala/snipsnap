@@ -53,7 +53,10 @@ func (RealFileOps) Copy(ctx context.Context, src, dst string, force bool) error 
 	if err != nil {
 		return fmt.Errorf("failed to open source file %q: %w", cleanSrc, err)
 	}
-	defer in.Close()
+	// With explicit error discarding (if reading only):
+	defer func() {
+		_ = in.Close()
+	}()
 
 	return AtomicWrite(cleanDst, force, func(w io.Writer) error {
 		return CopyWithContext(ctx, w, in)
@@ -71,7 +74,10 @@ func (RealFileOps) Combine(ctx context.Context, a, b, dst, sep string, force boo
 			return fmt.Errorf("failed to open input file A %q: %w", cleanA, err)
 		}
 		err = CopyWithContext(ctx, w, inA)
-		inA.Close()
+		if err := inA.Close(); err != nil {
+			// Return or handle if writing, or log/assign to _ if reading
+			_ = err
+		}
 		if err != nil {
 			return err
 		}
@@ -87,7 +93,9 @@ func (RealFileOps) Combine(ctx context.Context, a, b, dst, sep string, force boo
 			return fmt.Errorf("failed to open input file B %q: %w", cleanB, err)
 		}
 		err = CopyWithContext(ctx, w, inB)
-		inB.Close()
+		if err := inB.Close(); err != nil {
+			_ = err
+		}
 		return err
 	})
 }
