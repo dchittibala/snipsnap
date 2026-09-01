@@ -42,6 +42,11 @@ func run(ctx context.Context, args []string, ops fileops.FileOps, stderr io.Writ
 	var force bool
 
 	switch cmd {
+	case "version":
+		// Print build metadata injected by GoReleaser ldflags
+		fmt.Printf("snipsnap %s (commit: %s, built at: %s)\n", fileops.Version, fileops.Commit, fileops.BuildDate)
+		return ExitSuccess
+
 	case "create":
 		fs.StringVar(&text, "text", "", "optional text content to populate file")
 		fs.BoolVar(&force, "force", false, "overwrite destination file if it exists")
@@ -156,4 +161,5 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  copy     Copy a file to a new location")
 	_, _ = fmt.Fprintln(w, "  combine  Combine two files sequentially into a third file")
 	_, _ = fmt.Fprintln(w, "  delete   Delete an existing file")
+	_, _ = fmt.Fprintln(w, "  version  Print snipsnap version and build information")
 }

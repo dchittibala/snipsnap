@@ -1,22 +1,44 @@
 name: Auto-Bump & Release Pipeline
 
+# Version bumps follow the Conventional Commits spec documented in the
+# README: a "!" on the type/scope (e.g. "feat!:") or a "BREAKING CHANGE:"
+# footer -> MAJOR; "feat:" -> MINOR; anything else (incl. "fix:") -> PATCH.
+# To force a specific version regardless of the computed bump, add a
+# "Release-As: X.Y.Z" footer to a commit on main.
 on:
   push:
     branches:
       - main
- 
+
 permissions:
-  contents: write # Required to push tags and create GitHub Releases
+  contents: write
+  pull-requests: write
 
 jobs:
-  release:
-    name: Auto Bump & Publish
+  release-please:
+    name: Maintain Release PR & Cut Release
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
+
+  publish:
+    name: Build & Attach Binaries
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Release Tag
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required to calculate git history and existing tags
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -25,15 +47,6 @@ jobs:
 
       - name: Run Unit Tests
         run: go test -v -race -cover ./...
-
-      - name: Auto-Bump Version Tag
-        id: tagger
-        uses: anothrNick/github-tag-action@1.71.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          DEFAULT_BUMP: patch
-          RELEASE_BRANCHES: main,master
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

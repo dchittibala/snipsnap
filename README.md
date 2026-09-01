@@ -10,7 +10,7 @@ A Go CLI utility for safe file operations. `snipsnap` provides atomic file creat
 * **Stream Copying & Combining**: Handles large files efficiently using buffered streams with low memory overhead.
 * **Safety & Security**: Built-in safeguards against directory overwrites and path traversal vulnerabilities.
 * **Automated CI/CD Release Engine**: Cross-compiles native, zero-dependency binaries for Linux, macOS, and Windows across multiple architectures (`amd64`, `arm64`).
-* **Conventional Commits & Auto-Versioning**: Automatically calculates Semantic Versioning tags (`v1.0.0`, `v1.0.1`) on `master` branch merges.
+* **Conventional Commits & Auto-Versioning**: [release-please](https://github.com/googleapis/release-please) computes the next Semantic Version (including **major** bumps from `feat!:` / `BREAKING CHANGE:`) from Conventional Commits on `main` and maintains a standing release PR with the changelog.
 
 ---
 
@@ -19,9 +19,11 @@ A Go CLI utility for safe file operations. `snipsnap` provides atomic file creat
 ```text
 .
 ├── .github/
-│   └── workflows/
-│       ├── pr-checks.yml        # PR validation (linter, unit tests + race detector)
-│       └── release.yml          # Auto-bump tagger and GoReleaser pipeline
+│   ├── workflows/
+│   │   ├── ci-checks.yaml            # PR validation (linter, unit tests + race detector)
+│   │   └── release.yaml              # release-please versioning + GoReleaser binary publishing
+│   ├── release-please-config.json      # release-please versioning/changelog rules
+│   └── .release-please-manifest.json   # release-please's current tracked version
 ├── cmd/
 │   └── snipsnap/
 │       ├── main.go              # CLI entry point
@@ -36,6 +38,17 @@ A Go CLI utility for safe file operations. `snipsnap` provides atomic file creat
 ├── go.mod                       # Go module definition
 └── README.md
 ```
+
+---
+
+## Versioning Strategy
+
+Versioning is driven by two vendor-neutral standards, enforced by tooling rather than convention:
+
+* **[Conventional Commits](https://www.conventionalcommits.org/)** — the commit-message format that encodes intent (`feat:`, `fix:`, `feat!:`, `BREAKING CHANGE:`).
+* **[Semantic Versioning](https://semver.org/)** — the `MAJOR.MINOR.PATCH` rules that those intents map to.
+
+[release-please](https://github.com/googleapis/release-please) is the tool that implements both: it reads the commit history and computes the correct bump, so a `feat!:` or `BREAKING CHANGE:` commit becomes a real **major** release instead of being silently downgraded.
 
 ---
 
@@ -57,7 +70,7 @@ make init-hooks
 make build
 
 # Verify installation
-./bin/snipsnap --version
+./bin/snipsnap version
 ```
 
 ### Option 2: Download Compiled Binaries
@@ -103,6 +116,12 @@ snipsnap combine -force -sep="\n" fileA.txt fileB.txt fileA.txt
 # Safely remove a file (refuses to delete directories)
 snipsnap delete path/to/file.txt
 ```
+
+### 5. Print Version Information
+```bash
+# Show the version, commit, and build date injected at release time
+snipsnap version
+# -> snipsnap v1.2.3 (commit: abc1234, built at: 2026-09-01T12:00:00Z)
 
 ---
 
@@ -158,14 +177,20 @@ To introduce a **MAJOR** breaking change, add `!` after the type (e.g., `feat!: 
 
 ## CI/CD Pipeline Architecture
 
-### 1. Pull Request Stage (`.github/workflows/pr-checks.yml`)
+### 1. Pull Request Stage (`.github/workflows/ci-checks.yaml`)
 Runs automatically on PRs targeting `main`:
 * Runs `golangci-lint` to enforce code quality.
 * Runs `go test -race -cover ./...` to detect race conditions and verify unit test coverage.
 
-### 2. Auto-Bump & Release Stage (`.github/workflows/release.yml`)
-Runs automatically on code merges to `main`:
-* Evaluates Conventional Commit messages since the last git tag.
-* Calculates and pushes the next Semantic Version tag (`v1.0.0` → `v1.0.1`).
-* Triggers **GoReleaser** to build static binaries across Linux, macOS, and Windows (`amd64`, `arm64`).
-* Generates SHA-256 checksums and attaches distribution archives to a new GitHub Release.
+### 2. Release Stage (`.github/workflows/release.yaml`)
+A single workflow, run on every push to `main` (i.e. on every merge), with two jobs:
+
+**`release-please` job** — [release-please](https://github.com/googleapis/release-please) evaluates Conventional Commit messages since the last release and opens or updates a standing "release PR" with the computed next version and generated `CHANGELOG.md`.
+* Bump detection correctly implements the Conventional Commits spec: `feat!:` / `fix!:` / etc. (the `!` breaking-change marker) or a `BREAKING CHANGE:` footer → **major**; `feat:` → **minor**; everything else (including `fix:`) → **patch**.
+* Merging that release PR is what actually cuts the SemVer tag and GitHub Release — this is also the point to force an on-demand release of a specific version regardless of the computed bump, via a `Release-As: X.Y.Z` commit footer.
+
+**`publish` job** — runs in the same workflow run, but only when the `release-please` job reports `release_created == true` (i.e. the merge just cut a release):
+* Checks out the exact released tag and triggers **GoReleaser** to build static binaries across Linux, macOS, and Windows (`amd64`, `arm64`).
+* Generates SHA-256 checksums and attaches the distribution archives to that same GitHub Release (`release.mode: keep-existing` in `.goreleaser.yaml`, so it never overwrites release-please's changelog or creates a duplicate release).
+
+> The publish job is gated on release-please's output rather than a separate `on: release` trigger on purpose: release-please creates the release with the default `GITHUB_TOKEN`, and GitHub does not fire workflow events for `GITHUB_TOKEN` actions, so a standalone release-triggered workflow would never run.
